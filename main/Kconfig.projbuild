@@ -1,0 +1,48 @@
+menu "ESP-Smart-Assistant Configuration"
+config WIFI_WPA2_ENTERPRISE_ENABLE
+    bool "WIFI_WPA2_ENTERPRISE_ENABLE"
+    help
+        If use WIFI_WPA2_ENTERPRISE.
+
+config WIFI_SSID
+    string "WiFi SSID"
+	default "myssid"
+	help
+		SSID (network name) for the example to connect to.
+
+config WAP2_ENTERPRISE_ID
+    string "WAP2 ENTERPRISE ID"
+    default "myuserid"
+    help
+        User ID for your WPA2 ENTERPRISE WIFI if used.
+
+config WIFI_PASSWORD
+    string "WiFi Password"
+	default "mypassword"
+	help
+		WiFi password (WPA or WPA2) for the example to use. If use WPA2 Enterprise this is the password for the user.
+
+config BAIDU_ASR_ACCESS_KEY
+    string "BAIDU ASR ACCESS KEY"
+    default "mykey"
+    help
+        BAIDU ASR ACCESS KEY for your application   
+
+config BAIDU_ASR_ACCESS_SECERT
+    string "BAIDU ASR ACCESS SECERT"
+    default "mykey"
+    help
+        BAIDU ASR ACCESS SECERT for your application
+
+config BAIDU_GPT_ACCESS_KEY
+    string "BAIDU GPT ACCESS KEY"
+    default "mykey"
+    help
+        BAIDU GPT ACCESS KEY for your application   
+
+config BAIDU_GPT_ACCESS_SECERT
+    string "BAIDU GPT ACCESS SECERT"
+    default "mykey"
+    help
+        BAIDU GPT ACCESS SECERT for your application
+endmenu
