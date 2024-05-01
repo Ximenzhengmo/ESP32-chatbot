@@ -3,3 +3,4 @@ managed_components/
 esp_tts_voice_data_xiaoxin_small.dat
 *.vscode
 sdkconfig
+sdkconfig.old
