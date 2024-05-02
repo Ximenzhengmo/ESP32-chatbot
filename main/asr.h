@@ -60,11 +60,28 @@
 #endif
 
 
-
+/*
+ * @brief Initialize ASR
+ */
 void asr_init();
+
+/*
+ * @brief Uninitialize ASR
+ */
 void asr_uninit();
+
+/*
+ * @brief Get the text from ASR
+ *
+ * @return The text from ASR
+ *          - NULL if failed
+ */
 char* asr_get_text();
+
+/*
+ * @brief Clear the msg from the aduio-pipeline listener
+ *          in case of the multiple processing of the same msg
+ */
 void clear_msg();
-void i2s_reinstall(void);
-extern audio_event_iface_handle_t evt;
+
 #endif

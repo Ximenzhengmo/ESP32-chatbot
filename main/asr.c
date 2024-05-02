@@ -92,7 +92,7 @@ void asr_init() {
 
 
 void asr_uninit() {
-    ESP_LOGI(TAG, "[ 6 ] Stop audio_pipeline");
+    ESP_LOGI(TAG, "Stop audio_pipeline");
     baidu_sr_destroy(sr);
     /* Stop all periph before removing the listener */
     esp_periph_set_stop_all(set);
@@ -107,7 +107,7 @@ void asr_uninit() {
 char* asr_get_text() {
     ESP_LOGI(TAG, "[ 5 ] Listen for all pipeline events");
     char* original_text = NULL;
-    udp_server_stopped = false;
+    udp_server_start_process();
     while (1) {
         audio_event_iface_msg_t msg;
         if (audio_event_iface_listen(evt, &msg, portMAX_DELAY) != ESP_OK) {
@@ -125,7 +125,7 @@ char* asr_get_text() {
         }
         if (msg.cmd == PERIPH_BUTTON_PRESSED) {
             ESP_LOGI(TAG, "[ * ] Resuming pipeline");
-            udp_server_stopped = true;
+            udp_server_stop_process();
             baidu_sr_start(sr);
         } else if (msg.cmd == PERIPH_BUTTON_RELEASE || msg.cmd == PERIPH_BUTTON_LONG_RELEASE) {
             ESP_LOGI(TAG, "[ * ] Stop pipeline");
@@ -147,20 +147,3 @@ char* asr_get_text() {
     return original_text;
 }
 
-void i2s_reinstall(void){
-    static i2s_config_t i2s_config = {
-        .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_RX),
-        .sample_rate = ASR_SAMPLE_RATE,
-        .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-        .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-        .communication_format = I2S_COMM_FORMAT_STAND_I2S,
-        .intr_alloc_flags = ESP_INTR_FLAG_LEVEL2 | ESP_INTR_FLAG_IRAM,
-        .dma_buf_count = 3,
-        .dma_buf_len = 300,
-        .use_apll = true,
-        .tx_desc_auto_clear = false,
-        .fixed_mclk = 0
-    };
-    i2s_driver_uninstall(I2S_NUM_0);
-    i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
-}

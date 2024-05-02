@@ -14,7 +14,7 @@ void task(){
     tts_read_txt("已开机", false);
     while(1){
         esp_log_level_set("*", ESP_LOG_INFO);
-        ESP_LOGI(TAG, "please ask a question ....................");
+        ESP_LOGI(TAG, "please ask question ....................");
         char* question = asr_get_text();
 #ifndef HTTP_DEBUG_URI
         if( question != NULL ){

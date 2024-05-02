@@ -35,11 +35,25 @@
 extern TaskHandle_t udp_server_receive_handle;
 extern TaskHandle_t udp_server_send_handle; 
 
+/**
+ * @brief      Create UDP server
+*/
 void create_udp_server(void);
-void distory_udp_server(void);
-void udp_server_suspend();
-void udp_server_resume();
-void udp_server_wait_for_state_change( eTaskState state );
 
-bool udp_server_stopped;
+/**
+ * @brief      Destory UDP server
+*/
+void distory_udp_server(void);
+
+/**
+ * @brief      UDP server stop receive and response
+*/
+void udp_server_stop_process(void);
+
+/**
+ * @brief      UDP server start receive and response
+*/
+void udp_server_start_process(void);
+
+
 #endif

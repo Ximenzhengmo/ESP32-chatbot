@@ -34,26 +34,22 @@ extern "C" {
 #endif
 
 /* 
-        if it occurs error to ASR, you can open the macro to 
-    open a debug uri to get the error message from the server.
-        The debug uri is a http server in your local network. you
-    can use `python_script/ESP_http_debug.py` to start the server 
-    for example.
-*/
+ *       if it occurs error to ASR, you can open the macro to 
+ *   open a debug uri to get the error message from the server.
+ *       The debug uri is a http server in your local network. you
+ *   can use `python_script/ESP_http_debug.py` to start the server 
+ *   for example.
+ */
 // #define HTTP_DEBUG_URI "http://10.193.41.222:8000/"
 
 
 #define DEFAULT_SR_BUFFER_SIZE (1024*8)
 
-/**
- * Baidu Cloud Speech-to-Text audio encoding
- */
-
 typedef struct baidu_sr* baidu_sr_handle_t;
 typedef void (*baidu_sr_event_handle_t)(baidu_sr_handle_t sr);
 
 /**
- * Baidu Cloud Speech-to-Text configurations
+ * Baidu ASR configurations
  */
 typedef struct {
     const char *api_key;                /*!< API Key */
@@ -68,18 +64,18 @@ typedef struct {
 
 
 /**
- * @brief      initialize Baidu Cloud Speech-to-Text, this function will return a Speech-to-Text context
+ * @brief      initialize Baidu ASR, this function will return an ASR context
  *
- * @param      config  The Baidu Cloud Speech-to-Text configuration
+ * @param      config  The Baidu ASR configuration
  *
- * @return     The Speech-to-Text context
+ * @return     The ASR context
  */
 baidu_sr_handle_t baidu_sr_init(baidu_sr_config_t *config);
 
 /**
- * @brief      Start recording and sending audio to Baidu Cloud Speech-to-Text
+ * @brief      Start recording and sending audio to Baidu ASR
  *
- * @param[in]  sr   The Speech-to-Text context
+ * @param[in]  sr   The ASR context
  *
  * @return
  *     - ESP_OK
@@ -88,18 +84,18 @@ baidu_sr_handle_t baidu_sr_init(baidu_sr_config_t *config);
 esp_err_t baidu_sr_start(baidu_sr_handle_t sr);
 
 /**
- * @brief      Stop sending audio to Baidu Cloud Speech-to-Text and get the result text
+ * @brief      Stop sending audio to Baidu ASR and get the result text
  *
- * @param[in]  sr   The Speech-to-Text context
+ * @param[in]  sr   The ASR context
  *
- * @return     Baidu Cloud Speech-to-Text server response
+ * @return     Baidu ASR server response
  */
 char *baidu_sr_stop(baidu_sr_handle_t sr);
 
 /**
- * @brief      Cleanup the Speech-to-Text object
+ * @brief      Cleanup the ASR object
  *
- * @param[in]  sr   The Speech-to-Text context
+ * @param[in]  sr   The ASR context
  *
  * @return
  *  - ESP_OK
@@ -108,9 +104,9 @@ char *baidu_sr_stop(baidu_sr_handle_t sr);
 esp_err_t baidu_sr_destroy(baidu_sr_handle_t sr);
 
 /**
- * @brief      Register listener for the Speech-to-Text context
+ * @brief      Register listener for the ASR context
  *
- * @param[in]   sr   The Speech-to-Text context
+ * @param[in]   sr   The ASR context
  * @param[in]  listener  The listener
  *
  * @return
@@ -120,6 +116,15 @@ esp_err_t baidu_sr_destroy(baidu_sr_handle_t sr);
 esp_err_t baidu_sr_set_listener(baidu_sr_handle_t sr, audio_event_iface_handle_t listener);
 
 
+/**
+ * @brief      Reset the token of Baidu ASR
+ *
+ * @param[in]  sr    The ASR context
+ *
+ * @return
+ *  - ESP_OK
+ *  - ESP_FAIL
+ */
 esp_err_t baidu_sr_reset_token(baidu_sr_handle_t sr);
 
 

@@ -4,7 +4,6 @@ TaskHandle_t udp_server_receive_handle = NULL;
 bool udp_server_stopped = false;
 static const char *TAG = "udp_server";
 
-
 static void udp_server_receive_task(void *pvParameters)
 {
     static char rx_buffer[TRX_BUFFER_SIZE];
@@ -117,24 +116,10 @@ void distory_udp_server(void){
     }
 }
 
-void udp_server_suspend(){
-    if( udp_server_receive_handle ){
-        vTaskSuspend(udp_server_receive_handle);
-        ESP_LOGW(TAG, "udp server suspended");
-    }
+void udp_server_stop_process(void){
+    udp_server_stopped = true;
 }
 
-void udp_server_wait_for_state_change( eTaskState state ){
-    while( udp_server_receive_handle && eTaskGetState(udp_server_receive_handle) != state ){
-        vTaskDelay(50 / portTICK_PERIOD_MS);
-    }
-}
-
-void udp_server_resume(){
-    if( udp_server_receive_handle ){
-        if( eTaskGetState(udp_server_receive_handle) == eSuspended ){
-            vTaskResume(udp_server_receive_handle);
-            ESP_LOGW(TAG, "udp server resumed");
-        }
-    }
+void udp_server_start_process(void){
+    udp_server_stopped = false;
 }
