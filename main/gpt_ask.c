@@ -14,7 +14,12 @@ static const char *TAG = "GPT_ASK";
                     "}"
 #define BAIDU_API_KEY CONFIG_BAIDU_GPT_ACCESS_KEY
 #define BAIDU_SECRET_KEY CONFIG_BAIDU_GPT_ACCESS_SECERT
+
+/* 
+! The `../eb-instant` url is deprecated after 2024-07-04, the new url is `../ernie-lite-8k`
 #define GPT_URL "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/eb-instant?access_token=%s"
+*/
+#define GPT_URL "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-lite-8k?access_token=%s"
 
 
 GPT_resTxtState state = START;
