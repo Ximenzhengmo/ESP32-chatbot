@@ -15,7 +15,7 @@ BUAA  电子信息工程学院  第三届电子信息智能硬件创新大赛  �
 * **python_script/** : python scripts for debug or better usage
 * **esp32_chatbot_v1/** : board config files, added into `<adf-root>/components/audio_board`
 * **esp_tts_voice_data_xiaole.dat** : esp-tts file to write to Flash `voice_data` part in address `0x310000`
-* **partitions.csv**: partition table for flash use
+* **partitions.csv**: partition table for flash usage
 * **sdkconfig-template**: a template for sdkconfig, you can remove `-template` to use it in your project directly and we **recommand you do as this** because some items differ from the default sdkconfig choices( such as Flash size, partition table, PSRAM, SPIFLASH, ...).
 
 ## 项目配置(project config)

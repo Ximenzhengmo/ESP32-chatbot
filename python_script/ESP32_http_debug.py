@@ -7,7 +7,7 @@ import io
 import requests
 
 """
-    transit server to receive audio data from ESP32, and send it to Baidu ASR service for debug use
+    transit server to receive audio data from ESP32, and send it to Baidu ASR service for debug usage
 """
 
 

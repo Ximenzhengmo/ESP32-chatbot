@@ -61,21 +61,38 @@ typedef struct {
 } baidu_sr_config_t;
 
 
-
+typedef struct baidu_sr {
+    audio_pipeline_handle_t pipeline;
+    int                     remain_len;
+    int                     sr_total_write;
+    int                     sr_audio_total_bytes;
+    bool                    is_begin;
+    char                    *buffer;
+    char                    *b64_buffer;
+    audio_element_handle_t  i2s_reader;
+    audio_element_handle_t  http_stream_writer;
+    char                    *api_token;
+    char                    *api_key;
+    char                    *secret_key;
+    int                     sample_rates;
+    int                     buffer_size;
+    char                    *response_text;
+    baidu_sr_event_handle_t on_begin;
+} baidu_sr_t;
 
 /**
  * @brief      initialize Baidu ASR, this function will return an ASR context
  *
  * @param      config  The Baidu ASR configuration
  *
- * @return     The ASR context
+ * @return     The ASR handle
  */
 baidu_sr_handle_t baidu_sr_init(baidu_sr_config_t *config);
 
 /**
  * @brief      Start recording and sending audio to Baidu ASR
  *
- * @param[in]  sr   The ASR context
+ * @param[in]  sr   The ASR handle
  *
  * @return
  *     - ESP_OK
@@ -86,7 +103,7 @@ esp_err_t baidu_sr_start(baidu_sr_handle_t sr);
 /**
  * @brief      Stop sending audio to Baidu ASR and get the result text
  *
- * @param[in]  sr   The ASR context
+ * @param[in]  sr   The ASR handle
  *
  * @return     Baidu ASR server response
  */
@@ -95,7 +112,7 @@ char *baidu_sr_stop(baidu_sr_handle_t sr);
 /**
  * @brief      Cleanup the ASR object
  *
- * @param[in]  sr   The ASR context
+ * @param[in]  sr   The ASR handle
  *
  * @return
  *  - ESP_OK
@@ -106,7 +123,7 @@ esp_err_t baidu_sr_destroy(baidu_sr_handle_t sr);
 /**
  * @brief      Register listener for the ASR context
  *
- * @param[in]   sr   The ASR context
+ * @param[in]   sr   The ASR handle
  * @param[in]  listener  The listener
  *
  * @return

@@ -45,8 +45,28 @@
 
 static const char *TAG = "BAIDU_SR";
 
-
+//* BAIDU ASR Server
 #define BAIDU_SR_ENDPOINT   "https://vop.baidu.com/pro_api"
+
+/**
+ *      The json-like http(s) request body consists of 3 parts:
+ *          1. BAIDU_SR_BEGIN (const):   basic information of the audio data and parameters
+ *          2. base64 audio bytes    :   raw audio data in base64 format
+ *          3. BAIDU_SR_END (const):     end of the audio data, the total length of the audio data
+ *      The final request body is the combination of the 3 parts above. The 3 parts will be posted 
+ *  to the BAIDU_SR_ENDPOINT in the form of chunked data( HTTP Transfer-Encoding: chunked ) to decrease
+ *  the time of the whole `ask-asr-text` pipeline.
+ * 
+ *  HTTP-DETAILS:
+ *              actions                  httpstream-event              record btn
+ *      1. set HTTP POST Hearder      HTTP_STREAM_PRE_REQUEST       ON PRESSESED
+ *      2. write BAIDU_SR_BEGIN       HTTP_STREAM_ON_REQUEST         PRESSESED
+ *      3. write base64 audio         HTTP_STREAM_ON_REQUEST         PRESSESED
+ *                      ...
+ *      n. write BAIDU_SR_END        HTTP_STREAM_POST_REQUEST        ON RELEASED
+ *     n+1. receive response        HTTP_STREAM_FINISH_REQUEST        RELEASED
+ * 
+ */
 #define BAIDU_SR_BEGIN      "{"                                 \
                                 "\"format\": \"pcm\","          \
                                 "\"rate\": 16000,"              \
@@ -63,26 +83,9 @@ static const char *TAG = "BAIDU_SR";
 
 #define BAIDU_SR_TASK_STACK (8*1024)
 
-typedef struct baidu_sr {
-    audio_pipeline_handle_t pipeline;
-    int                     remain_len;
-    int                     sr_total_write;
-    int                     sr_audio_total_bytes;
-    bool                    is_begin;
-    char                    *buffer;
-    char                    *b64_buffer;
-    audio_element_handle_t  i2s_reader;
-    audio_element_handle_t  http_stream_writer;
-    char                    *api_token;
-    char                    *api_key;
-    char                    *secret_key;
-    int                     sample_rates;
-    int                     buffer_size;
-    char                    *response_text;
-    baidu_sr_event_handle_t on_begin;
-} baidu_sr_t;
 
 
+//* chunked-write fun
 static int _http_write_chunk(esp_http_client_handle_t http, const char *buffer, int len)
 {
     char header_chunk_buffer[16];
@@ -108,7 +111,8 @@ static esp_err_t _http_stream_writer_event_handle(http_stream_event_msg_t *msg)
 
     int write_len;
     size_t need_write = 0;
-
+    
+    //* HTTP_STREAM_PRE_REQUEST
     if (msg->event_id == HTTP_STREAM_PRE_REQUEST) {
         // set header
         ESP_LOGI(TAG, "[ + ] HTTP client HTTP_STREAM_PRE_REQUEST, lenght=%d", msg->buffer_len);
@@ -117,16 +121,18 @@ static esp_err_t _http_stream_writer_event_handle(http_stream_event_msg_t *msg)
         sr->is_begin = true;
         sr->remain_len = 0;
         esp_http_client_set_method(http, HTTP_METHOD_POST);
-        esp_http_client_set_post_field(http, NULL, -1); // Chunk content
+        //* set headers
+        esp_http_client_set_post_field(http, NULL, -1);
         esp_http_client_set_header(http, "Content-Type", "application/json");
         esp_http_client_set_header(http, "Connection", "keep-alive");
         esp_http_client_delete_header(http, "Content-Length");
         return ESP_OK;
     }
 
+    //* HTTP_STREAM_ON_REQUEST
     if (msg->event_id == HTTP_STREAM_ON_REQUEST) {
         ESP_LOGI(TAG, "[ + ] HTTP client HTTP_STREAM_ON_REQUEST, lenght=%d, begin=%d", msg->buffer_len, sr->is_begin);
-        /* Write first chunk */
+        //*  Write first chunk: BAIDU_SR_BEGIN 
         if (sr->is_begin) {
             sr->is_begin = false;
             int sr_begin_len = snprintf(sr->buffer, sr->buffer_size, BAIDU_SR_BEGIN, sr->api_token);
@@ -136,28 +142,33 @@ static esp_err_t _http_stream_writer_event_handle(http_stream_event_msg_t *msg)
             ESP_LOGI(TAG, "BAIDU_SR_BEGIN: "BAIDU_SR_BEGIN, sr->api_token);
             return _http_write_chunk(http, sr->buffer, sr_begin_len);
         }
+        //* base64-encoded need at most 1.5 times buffer than the raw audio buffer
         if (msg->buffer_len > sr->buffer_size * 3 / 2) {
             ESP_LOGE(TAG, "Please use SR Buffer size greeter than %d", msg->buffer_len * 3 / 2);
             return ESP_FAIL;
         }
 
-        /* Write b64 audio data */
+        //* Write b64 audio data
         memcpy(sr->buffer + sr->remain_len, msg->buffer, msg->buffer_len);
         sr->remain_len += msg->buffer_len;
-        int keep_next_time = sr->remain_len % 3;
 
+        //* base64 need to keep the datalen to encode as the multiple of 3
+        int keep_next_time = sr->remain_len % 3;
         sr->remain_len -= keep_next_time;
         if (mbedtls_base64_encode((unsigned char *)sr->b64_buffer, sr->buffer_size,  &need_write, (unsigned char *)sr->buffer, sr->remain_len) != 0) {
             ESP_LOGE(TAG, "Error encode b64");
             return ESP_FAIL;
         }
+        //* calculate total raw audio len
         sr->sr_audio_total_bytes += sr->remain_len;
+        //* keep the `keep_next_time bytes` 
         if (keep_next_time > 0) {
             memcpy(sr->buffer, sr->buffer + sr->remain_len, keep_next_time);
         }
         sr->remain_len = keep_next_time;
         ESP_LOGD(TAG, "\033[A\33[2K\rTotal bytes written: %d", sr->sr_total_write);
 
+        //* write base64 data
         write_len = _http_write_chunk(http, (const char *)sr->b64_buffer, need_write);
         if (write_len <= 0) {
             return write_len;
@@ -166,10 +177,11 @@ static esp_err_t _http_stream_writer_event_handle(http_stream_event_msg_t *msg)
         return write_len;
     }
 
-    /* Write End chunk */
+    //* HTTP_STREAM_POST_REQUEST
     if (msg->event_id == HTTP_STREAM_POST_REQUEST) {
         ESP_LOGI(TAG, "[ + ] HTTP client HTTP_STREAM_POST_REQUEST, write end chunked marker");
         need_write = 0;
+        //* write remained bytes
         if (sr->remain_len) {
             if (mbedtls_base64_encode((unsigned char *)sr->b64_buffer, sr->buffer_size,  &need_write, (unsigned char *)sr->buffer, sr->remain_len) != 0) {
                 ESP_LOGE(TAG, "Error encode b64");
@@ -181,19 +193,20 @@ static esp_err_t _http_stream_writer_event_handle(http_stream_event_msg_t *msg)
                 return write_len;
             }
         }
+        //* Write End chunk: BAIDU_SR_END 
         int sr_end_len  = snprintf(sr->buffer, sr->buffer_size, BAIDU_SR_END, sr->sr_audio_total_bytes);
         write_len = _http_write_chunk(http, sr->buffer, sr_end_len);
         ESP_LOGI(TAG, "BAIDU_SE_END: "BAIDU_SR_END, sr->sr_audio_total_bytes);
         if (write_len <= 0) {
             return ESP_FAIL;
         }
-        /* Finish chunked */
+        //* Finish chunked
         if (esp_http_client_write(http, "0\r\n\r\n", 5) <= 0) {
             return ESP_FAIL;
         }
         return write_len;
     }
-
+    //* HTTP_STREAM_FINISH_REQUEST
     if (msg->event_id == HTTP_STREAM_FINISH_REQUEST) {
         int read_len = esp_http_client_read(http, (char *)sr->buffer, sr->buffer_size);
         ESP_LOGI(TAG, "[ + ] HTTP client HTTP_STREAM_FINISH_REQUEST, read_len=%d", read_len);
@@ -208,12 +221,14 @@ static esp_err_t _http_stream_writer_event_handle(http_stream_event_msg_t *msg)
         if (sr->response_text) {
             free(sr->response_text);
         }
+        //* parse json and get `result`
         sr->response_text = json_get_token_value(sr->buffer, "result");
         return ESP_OK;
     }
     return ESP_OK;
 }
 
+//* Initialize Baidu_sr
 baidu_sr_handle_t baidu_sr_init(baidu_sr_config_t *config)
 {
     audio_pipeline_cfg_t pipeline_cfg = DEFAULT_AUDIO_PIPELINE_CONFIG();
@@ -244,14 +259,16 @@ baidu_sr_handle_t baidu_sr_init(baidu_sr_config_t *config)
     }
     AUDIO_MEM_CHECK(TAG, sr->api_token, goto exit_sr_init);
 
+    //* config I2S
     i2s_stream_cfg_t i2s_cfg = I2S_STREAM_CFG_DEFAULT();
     i2s_cfg.type = AUDIO_STREAM_READER;
     i2s_cfg.i2s_config.sample_rate = config->record_sample_rates;
     i2s_cfg.i2s_config.channel_format = I2S_CHANNEL_FMT_ONLY_LEFT;
-    // 新加的貌似可以解决噪声问题
+    //* set `use_apll` to `false` to avoid noise due to unstable clk
     i2s_cfg.i2s_config.use_apll = false;
     sr->i2s_reader = i2s_stream_init(&i2s_cfg);
 
+    //* config HTTPSTREAM
     http_stream_cfg_t http_cfg = HTTP_STREAM_CFG_DEFAULT();
     http_cfg.type = AUDIO_STREAM_WRITER;
     http_cfg.event_handle = _http_stream_writer_event_handle;
@@ -301,9 +318,11 @@ esp_err_t baidu_sr_set_listener(baidu_sr_handle_t sr, audio_event_iface_handle_t
     return ESP_OK;
 }
 
+
 esp_err_t baidu_sr_start(baidu_sr_handle_t sr)
 {
     // snprintf(sr->buffer, sr->buffer_size, BAIDU_SR_ENDPOINT);
+//* use HTTP_DEBUG_URI or not
 #ifdef HTTP_DEBUG_URI
     audio_element_set_uri(sr->http_stream_writer, HTTP_DEBUG_URI);
 #else
@@ -322,6 +341,7 @@ char *baidu_sr_stop(baidu_sr_handle_t sr)
     AUDIO_NULL_CHECK(TAG, sr->response_text, {
         return NULL;
     })
+    //* get pure answer text
     char* pure_text = strndup(sr->response_text + 2, strlen(sr->response_text) - 4);
     free(sr->response_text);
     sr->response_text = NULL;

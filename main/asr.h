@@ -41,9 +41,10 @@
             },                                          \
         },                                              \
         .wpa2_e_cfg = {                                 \
+            /** eap_id can be changed */                \
             .eap_id = CONFIG_WAP2_ENTERPRISE_ID,        \
-            .diasble_wpa2_e = true,                     \
-            .eap_method = 1,  /* PEAP */                \
+            .diasble_wpa2_e = true, /** an idf BUG */   \
+            .eap_method = 1,  /** PEAP default */       \
             .eap_username = CONFIG_WAP2_ENTERPRISE_ID,  \
             .eap_password = CONFIG_WIFI_PASSWORD,       \
         },                                              \
